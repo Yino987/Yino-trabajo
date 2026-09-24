@@ -1,0 +1,10 @@
+{
+  "description": "This platform streamlines real estate management for Huancayo, allowing agents to manage properties and clients to easily browse listings and schedule visits.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
