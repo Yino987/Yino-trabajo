@@ -1,27 +1,62 @@
-import { useState } from 'react';
-import type { Role, User } from './types';
-import LoginPage from './components/LoginPage';
-import AdminDashboard from './components/AdminDashboard';
-import AgenteDashboard from './components/AgenteDashboard';
-import ClienteDashboard from './components/ClienteDashboard';
+import { useEffect, useState } from "react"
+import LoginPage from "./pages/LoginPage"
+import AdminApp from "./roles/admin/AdminApp"
+import AgentApp from "./roles/agent/AgentApp"
+import ClientApp from "./roles/client/ClientApp"
+import type { Role, Theme, User } from "./types"
 
-const DEMO_USERS: Record<Role, User> = {
-  admin: { id: 'admin1', name: 'Luis Alberto Rojas', role: 'admin', email: 'admin@huancayork.pe' },
-  agente: { id: 'a1', name: 'Carlos Quispe Flores', role: 'agente', email: 'c.quispe@huancayork.pe' },
-  cliente: { id: 'c1', name: 'Rodrigo Palomino Yauri', role: 'cliente', email: 'rodrigo.p@gmail.com' },
-};
+const USERS: Record<Role, User> = {
+  admin: {
+    id: "u-admin",
+    name: "Seymon Pascual",
+    email: "admin@huancayork.pe",
+    role: "admin",
+  },
+  agent: {
+    id: "a-01",
+    name: "Valeria Rojas",
+    email: "valeria@huancayork.pe",
+    role: "agent",
+  },
+  client: {
+    id: "c-01",
+    name: "Diego Salazar",
+    email: "diego@gmail.com",
+    role: "client",
+  },
+}
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null)
+  const [theme, setTheme] = useState<Theme>(() => {
+    const stored = localStorage.getItem("huancayork-theme")
+    if (stored === "light" || stored === "dark") return stored
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light"
+  })
 
-  const handleLogin = (role: Role) => {
-    setUser(DEMO_USERS[role]);
-  };
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem("huancayork-theme", theme)
+  }, [theme])
 
-  const handleLogout = () => setUser(null);
+  const toggleTheme = () =>
+    setTheme((current) => (current === "light" ? "dark" : "light"))
+  const logout = () => setUser(null)
 
-  if (!user) return <LoginPage onLogin={handleLogin} />;
-  if (user.role === 'admin') return <AdminDashboard user={user} onLogout={handleLogout} />;
-  if (user.role === 'agente') return <AgenteDashboard user={user} onLogout={handleLogout} />;
-  return <ClienteDashboard user={user} onLogout={handleLogout} />;
+  if (!user) {
+    return (
+      <LoginPage
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onLogin={(role) => setUser(USERS[role])}
+      />
+    )
+  }
+
+  const common = { user, theme, onThemeToggle: toggleTheme, onLogout: logout }
+  if (user.role === "admin") return <AdminApp {...common} />
+  if (user.role === "agent") return <AgentApp {...common} />
+  return <ClientApp {...common} />
 }

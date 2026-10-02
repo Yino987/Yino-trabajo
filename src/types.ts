@@ -1,77 +1,86 @@
-export type Role = 'admin' | 'agente' | 'cliente';
+export type Role = "admin" | "agent" | "client"
+export type Theme = "light" | "dark"
 
 export interface User {
-  id: string;
-  name: string;
-  role: Role;
-  email: string;
-  avatar?: string;
+  id: string
+  name: string
+  email: string
+  role: Role
 }
 
 export interface Property {
-  id: string;
-  code: string;
-  title: string;
-  type: 'venta' | 'alquiler';
-  status: 'disponible' | 'reservado' | 'vendido' | 'alquilado';
-  price: number;
-  currency: 'PEN' | 'USD';
-  district: string;
-  address: string;
-  area: number;
-  bedrooms: number;
-  bathrooms: number;
-  agentId: string;
-  agentName: string;
-  image: string;
-  description: string;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  dni: string;
-  registeredAt: string;
+  id: string
+  code: string
+  title: string
+  district: string
+  address: string
+  price: number
+  operation: "Venta" | "Alquiler"
+  status: "Disponible" | "Reservada" | "Vendida" | "Alquilada"
+  bedrooms: number
+  bathrooms: number
+  area: number
+  image: string
+  agentId: string
+  agentName: string
 }
 
 export interface Agent {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  properties: number;
-  visits: number;
-  contracts: number;
+  id: string
+  name: string
+  email: string
+  phone: string
+  zone: string
+  sales: number
+  volume: number
+  status: "Activo" | "Vacaciones"
+}
+
+export interface Client {
+  id: string
+  name: string
+  email: string
+  phone: string
+  preference: string
+  budget: number
+  status: "Nuevo" | "En seguimiento" | "Cliente"
 }
 
 export interface Visit {
-  id: string;
-  propertyId: string;
-  propertyTitle: string;
-  clientId: string;
-  clientName: string;
-  agentId: string;
-  agentName: string;
-  date: string;
-  time: string;
-  status: 'pendiente' | 'confirmada' | 'realizada' | 'cancelada';
+  id: string
+  propertyId: string
+  property: string
+  clientId: string
+  client: string
+  agentId: string
+  agent: string
+  date: string
+  time: string
+  status: "Programada" | "Confirmada" | "Realizada" | "Cancelada"
 }
 
 export interface Contract {
-  id: string;
-  code: string;
-  propertyId: string;
-  propertyTitle: string;
-  clientId: string;
-  clientName: string;
-  agentId: string;
-  agentName: string;
-  type: 'venta' | 'alquiler';
-  amount: number;
-  currency: 'PEN' | 'USD';
-  startDate: string;
-  endDate?: string;
-  status: 'activo' | 'cerrado' | 'cancelado';
+  id: string
+  property: string
+  clientId: string
+  client: string
+  agentId: string
+  agent: string
+  type: "Venta" | "Alquiler"
+  amount: number
+  date: string
+  status: "Activo" | "Completado" | "Borrador"
+}
+
+export interface ShellProps {
+  user: User
+  theme: Theme
+  onThemeToggle: () => void
+  onLogout: () => void
+}
+
+export interface NavItem {
+  id: string
+  label: string
+  icon: string
 }

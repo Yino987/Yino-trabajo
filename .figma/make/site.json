@@ -1,5 +1,5 @@
 {
-  "description": "This platform streamlines real estate management for Huancayo, allowing agents to manage properties and clients to easily browse listings and schedule visits.",
+  "description": "A role-based real estate platform offering separate modules for administrators, agents, and clients with dark/light mode and exportable sales reports.",
   "robots": {
     "index": false
   },
