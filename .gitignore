@@ -1,21 +1,56 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Dependency directories
 node_modules/
+jspm_packages/
+web_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# Build outputs
 dist/
 build/
 .cache/
-.env*
+.parcel-cache/
+.next/
+out/
+.nuxt/
+.output/
+.svelte-kit/
+.vuepress/dist/
+
+# Vite files
 .vite/
 vite.config.*.timestamp-*
-*.tsbuildinfo
-*-debug.log*
-logs/
-*.log
-.claude-replay.*
-.tmp-*
-/.figma/design-context/
 
-# Platform-managed agentplat state, not project source. In the
-# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
-# repo root IS the workspace root, so these land inside this repo rather than
-# beside it.
+# Platform-managed files & plugins
 /.plugins/
 /.opencode-skills/
+/.figma/design-context/
+.claude-replay.*
+.tmp-*
