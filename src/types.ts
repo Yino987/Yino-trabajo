@@ -33,11 +33,12 @@ export interface Agent {
   zone: string
   sales: number
   volume: number
-  status: "Activo" | "Vacaciones"
+  status: "Activo" | "Vacaciones" | "Inactivo"
 }
 
 export interface Client {
   id: string
+  code: string
   name: string
   email: string
   phone: string
@@ -69,7 +70,7 @@ export interface Contract {
   type: "Venta" | "Alquiler"
   amount: number
   date: string
-  status: "Activo" | "Completado" | "Borrador"
+  status: "Activo" | "Completado" | "Borrador" | "Vencido"
 }
 
 export interface ShellProps {
