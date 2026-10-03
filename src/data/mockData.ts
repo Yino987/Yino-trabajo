@@ -141,6 +141,7 @@ export const agents: Agent[] = [
 export const clients: Client[] = [
   {
     id: "c-01",
+    code: "CLI-1001",
     name: "Diego Salazar",
     email: "diego@gmail.com",
     phone: "980 112 408",
@@ -150,6 +151,7 @@ export const clients: Client[] = [
   },
   {
     id: "c-02",
+    code: "CLI-1002",
     name: "Milagros Ramos",
     email: "milagros@gmail.com",
     phone: "944 723 100",
@@ -159,6 +161,7 @@ export const clients: Client[] = [
   },
   {
     id: "c-03",
+    code: "CLI-1003",
     name: "Carlos Mendoza",
     email: "carlos@gmail.com",
     phone: "912 630 588",
@@ -168,6 +171,7 @@ export const clients: Client[] = [
   },
   {
     id: "c-04",
+    code: "CLI-1004",
     name: "Andrea Pérez",
     email: "andrea@gmail.com",
     phone: "995 408 122",

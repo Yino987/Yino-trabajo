@@ -10,12 +10,14 @@ export default function PropertyCard({
   requested,
   onRequest,
   onContact,
+  onViewDetail,
 }: {
   property: Property
   mode: "admin" | "agent" | "client"
   requested?: boolean
   onRequest?: (property: Property) => void
   onContact?: (property: Property) => void
+  onViewDetail?: (property: Property) => void
 }) {
   const [favorite, setFavorite] = useState(false)
   return (
@@ -91,7 +93,7 @@ export default function PropertyCard({
               </Button>
             </div>
           ) : (
-            <Button variant="secondary">Ver detalle</Button>
+            <Button variant="secondary" onClick={() => onViewDetail?.(property)}>Ver detalle</Button>
           )}
         </div>
       </div>
