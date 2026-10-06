@@ -1,22 +1,59 @@
 import type { ReactNode } from "react"
+
+import { createPortal } from "react-dom"
+
 import Icon from "./Icon"
 
 export default function Modal({
   title,
+
   onClose,
+
   children,
+
+  anchor,
+  size = "default",
 }: {
   title: string
+
   onClose: () => void
+
   children: ReactNode
+
+  anchor?: {
+    left: number
+    top: number
+  } | null
+  size?: "default" | "wide"
 }) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       role="dialog"
       aria-modal="true"
+      onClick={anchor ? onClose : undefined}
     >
-      <div className="fade-in max-h-[90vh] w-full max-w-lg overflow-auto rounded-3xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl">
+      <div
+        className={`${
+          anchor ? "" : "fade-in"
+        } max-h-[90vh] w-full ${
+          size === "wide" ? "max-w-4xl" : "max-w-lg"
+        } overflow-auto rounded-3xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 shadow-2xl`}
+        style={
+          anchor
+            ? {
+                position: "fixed",
+
+                left: anchor.left,
+
+                top: anchor.top,
+
+                transform: "translate(-50%, -50%)",
+              }
+            : undefined
+        }
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-display text-2xl font-bold">{title}</h2>
           <button
@@ -29,6 +66,8 @@ export default function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+
+    document.body,
   )
 }

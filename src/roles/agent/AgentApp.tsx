@@ -15,14 +15,14 @@ const nav: NavItem[] = [
   { id: "reports", label: "Mis resultados", icon: "chart" },
 ]
 
-export default function AgentApp(props: ShellProps) {
+export default function AgentApp(props: ShellProps & { accountToken: string }) {
   const [active, setActive] = useState("dashboard")
   const pages: Record<string, React.ReactNode> = {
-    dashboard: <AgentDashboard onNavigate={setActive} />,
-    properties: <AgentProperties />,
-    visits: <AgentVisits />,
-    contracts: <AgentContracts />,
-    reports: <AgentReports />,
+    dashboard: <AgentDashboard accountToken={props.accountToken} userName={props.user.name} onNavigate={setActive} />,
+    properties: <AgentProperties accountToken={props.accountToken} />,
+    visits: <AgentVisits accountToken={props.accountToken} />,
+    contracts: <AgentContracts accountToken={props.accountToken} />,
+    reports: <AgentReports accountToken={props.accountToken} />,
   }
   return (
     <AppShell {...props} nav={nav} active={active} onNavigate={setActive}>

@@ -42,9 +42,11 @@ export default function AppShell({
           >
             <Icon name={menuOpen ? "close" : "menu"} />
           </button>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand)] text-white">
-            <Icon name="building" size={20} />
-          </div>
+          <img
+            src="/inmobiliaria.png"
+            alt="Habitat Inmobiliaria"
+            className="h-10 w-10 rounded-xl bg-white object-contain"
+          />
           <div>
             <p className="font-display text-lg font-bold leading-none">
               Huancayork
@@ -101,7 +103,9 @@ export default function AppShell({
             <div className="mb-3 rounded-xl bg-[var(--surface-soft)] p-3">
               <p className="truncate text-xs font-semibold">{user.email}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Sesión protegida por rol
+                {user.role === "admin"
+                  ? "Sesión local de administrador"
+                  : "Perfil de demostración"}
               </p>
             </div>
             <button

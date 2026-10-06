@@ -1,113 +1,92 @@
+import { useEffect, useState } from "react"
+
 import MetricCard from "../../components/MetricCard"
-import DataTable from "../../components/DataTable"
-import { contracts, properties, visits } from "../../data/mockData"
-import { money } from "../../utils/format"
 import { Button, Card, PageHeader, StatusBadge } from "../../components/ui"
+import { money } from "../../utils/format"
+import {
+  getAgentContracts,
+  getAgentProperties,
+  getAgentVisits,
+  type DatabaseContract,
+  type DatabaseVisit,
+  type PublicProperty,
+} from "../../utils/databaseApi"
 
 export default function AgentDashboard({
+  accountToken,
+  userName,
   onNavigate,
 }: {
+  accountToken: string
+  userName: string
   onNavigate: (page: string) => void
 }) {
-  const myProperties = properties.filter((item) => item.agentId === "a-01")
-  const myVisits = visits.filter((item) => item.agentId === "a-01")
-  const myContracts = contracts.filter((item) => item.agentId === "a-01")
+  const [properties, setProperties] = useState<PublicProperty[]>([])
+  const [visits, setVisits] = useState<DatabaseVisit[]>([])
+  const [contracts, setContracts] = useState<DatabaseContract[]>([])
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    Promise.all([getAgentProperties(accountToken), getAgentVisits(accountToken), getAgentContracts(accountToken)])
+      .then(([propertyRows, visitRows, contractRows]) => {
+        if (!active) return
+        setProperties(propertyRows)
+        setVisits(visitRows)
+        setContracts(contractRows)
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(cause instanceof Error ? cause.message : "No se pudo cargar tu panel.")
+      })
+    return () => { active = false }
+  }, [accountToken])
+
+  const upcomingVisits = visits.filter((visit) =>
+    ["Programada", "Confirmada"].includes(visit.status) &&
+    new Date(`${visit.visit_date}T${visit.visit_time}:00`).getTime() >= Date.now(),
+  )
+  const volume = contracts.reduce((sum, contract) => sum + Number(contract.amount), 0)
+
   return (
     <>
       <PageHeader
-        eyebrow="Espacio de agente"
-        title="Hola, Valeria"
-        description="Prioridades, agenda y avance de tu cartera comercial."
-        actions={
-          <Button onClick={() => onNavigate("visits")} icon="calendar">
-            Abrir agenda
-          </Button>
-        }
+        eyebrow="Espacio de asesor"
+        title={`Hola, ${userName}`}
+        description="Actividad vinculada a tu cuenta en la base de datos Inmobiliaria."
+        actions={<Button onClick={() => onNavigate("visits")} icon="calendar">Abrir agenda</Button>}
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Propiedades asignadas"
-          value={String(myProperties.length)}
-          note="3 disponibles"
-          icon="building"
-        />
-        <MetricCard
-          label="Visitas próximas"
-          value={String(myVisits.length)}
-          note="2 por confirmar"
-          icon="calendar"
-          tone="accent"
-        />
-        <MetricCard
-          label="Ventas del periodo"
-          value="8"
-          note="Objetivo: 10 ventas"
-          icon="chart"
-          tone="gold"
-        />
-        <MetricCard
-          label="Comisión estimada"
-          value="S/ 24,600"
-          note="+12% este mes"
-          icon="badge"
-          tone="info"
-        />
+      {error && <p role="alert" className="mb-5 rounded-xl bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">{error}</p>}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <MetricCard label="Inmuebles asignados" value={String(properties.length)} note="Cartera actual" icon="building" />
+        <MetricCard label="Visitas pendientes" value={String(upcomingVisits.length)} note="Programadas y confirmadas" icon="calendar" tone="accent" />
+        <MetricCard label="Contratos asociados" value={String(contracts.length)} note={money(volume)} icon="chart" tone="gold" />
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <Card className="p-6">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--accent)]">
-            Objetivo mensual
-          </p>
-          <h2 className="font-display mt-2 text-2xl font-bold">
-            8 de 10 operaciones
-          </h2>
-          <div className="my-6 h-3 overflow-hidden rounded-full bg-[var(--surface-soft)]">
-            <div className="h-full w-4/5 rounded-full bg-[var(--brand)]" />
+          <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-xl font-bold">Próximas visitas</h2><button onClick={() => onNavigate("visits")} className="text-sm font-bold text-[var(--brand)]">Agenda</button></div>
+          <div className="space-y-3">
+            {upcomingVisits.slice(0, 5).map((visit) => (
+              <div key={visit.id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-soft)] p-3">
+                <div><p className="font-semibold">{visit.property}</p><p className="mt-1 text-xs text-[var(--muted)]">{visit.visit_date} · {visit.visit_time} · {visit.client}</p></div>
+                <StatusBadge status={visit.status} />
+              </div>
+            ))}
+            {!upcomingVisits.length && <p className="text-sm text-[var(--muted)]">No tienes visitas pendientes.</p>}
           </div>
-          <p className="text-sm leading-6 text-[var(--muted)]">
-            Estás a dos operaciones de superar tu meta. Hay tres clientes con
-            alta intención de compra.
-          </p>
-          <Button
-            variant="secondary"
-            className="mt-5 w-full"
-            onClick={() => onNavigate("reports")}
-          >
-            Ver resultados
-          </Button>
         </Card>
-        <div>
-          <h2 className="font-display mb-4 text-xl font-bold">
-            Agenda inmediata
-          </h2>
-          <DataTable
-            headers={["Fecha", "Propiedad", "Cliente", "Estado"]}
-            rows={myVisits.map((visit) => [
-              <b>
-                {visit.date} · {visit.time}
-              </b>,
-              visit.property,
-              visit.client,
-              <StatusBadge status={visit.status} />,
-            ])}
-          />
-        </div>
-      </div>
-      <Card className="mt-6 p-6">
-        <div className="flex justify-between">
-          <div>
-            <h2 className="font-display text-xl font-bold">
-              Volumen gestionado
-            </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Contratos asociados a tu cuenta
-            </p>
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-xl font-bold">Cartera reciente</h2><button onClick={() => onNavigate("properties")} className="text-sm font-bold text-[var(--brand)]">Ver cartera</button></div>
+          <div className="space-y-3">
+            {properties.slice(0, 5).map((property) => (
+              <div key={property.id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-soft)] p-3">
+                <div><p className="font-semibold">{property.category} · {property.address}</p><p className="mt-1 text-xs text-[var(--muted)]">{property.district} · {money(Number(property.price))}</p></div>
+                <StatusBadge status={property.status ?? "Sin estado"} />
+              </div>
+            ))}
+            {!properties.length && <p className="text-sm text-[var(--muted)]">No tienes inmuebles asignados.</p>}
           </div>
-          <p className="font-display text-2xl font-bold text-[var(--brand)]">
-            {money(myContracts.reduce((sum, item) => sum + item.amount, 0))}
-          </p>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </>
   )
 }

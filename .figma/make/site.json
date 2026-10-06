@@ -1,5 +1,9 @@
 {
+  "title": "Inmobiliaria App",
   "description": "A role-based real estate platform offering separate modules for administrators, agents, and clients with dark/light mode and exportable sales reports.",
+  "icons": {
+    "icon": "/inmobiliaria.png"
+  },
   "robots": {
     "index": false
   },

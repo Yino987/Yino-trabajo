@@ -1,305 +1,212 @@
-import { useState } from "react"
-import { agents as initialAgents } from "../../data/mockData"
-import type { Agent } from "../../types"
-import { money } from "../../utils/format"
-import Modal from "../../components/Modal"
-import {
-  Button,
-  Card,
-  Input,
-  PageHeader,
-  StatusBadge,
-} from "../../components/ui"
-import Icon from "../../components/Icon"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 
-export default function AdminAgents() {
-  const [agents, setAgents] = useState(initialAgents)
+import Icon from "../../components/Icon"
+import Modal from "../../components/Modal"
+import { Button, Card, Input, PageHeader } from "../../components/ui"
+import { money } from "../../utils/format"
+import {
+  getAdminAgents,
+  saveAccount,
+  saveAdminRecord,
+  type DatabaseAgent,
+} from "../../utils/databaseApi"
+
+type AgentForm = {
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+  password: string
+}
+
+const emptyForm: AgentForm = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "",
+  password: "",
+}
+
+export default function AdminAgents({ adminToken }: { adminToken: string }) {
+  const [agents, setAgents] = useState<DatabaseAgent[]>([])
   const [search, setSearch] = useState("")
   const [sortOrder, setSortOrder] = useState("Predeterminado")
-  
+  const [form, setForm] = useState(emptyForm)
+  const [editing, setEditing] = useState<DatabaseAgent | null>(null)
+  const [viewing, setViewing] = useState<DatabaseAgent | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [viewingAgent, setViewingAgent] = useState<Agent | null>(null)
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState("")
 
-  const initialForm = {
-    name: "",
-    email: "",
-    phone: "",
-    zone: "",
-    sales: "0",
-    volume: "0",
-    status: "Activo",
-  }
-  
-  const [formData, setFormData] = useState(initialForm)
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newAgent: Agent = {
-      id: `A-${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      zone: formData.zone,
-      sales: parseInt(formData.sales) || 0,
-      volume: parseFloat(formData.volume) || 0,
-      status: formData.status as Agent["status"],
+  const loadAgents = async () => {
+    setIsLoading(true)
+    try {
+      setAgents(await getAdminAgents(adminToken))
+      setError("")
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudieron cargar los asesores.")
+    } finally {
+      setIsLoading(false)
     }
-    setAgents([...agents, newAgent])
-    setIsCreating(false)
-    setFormData(initialForm)
   }
 
-  const openEdit = (agent: Agent) => {
-    setViewingAgent(null)
-    setFormData({
-      name: agent.name,
-      email: agent.email,
-      phone: agent.phone,
-      zone: agent.zone,
-      sales: agent.sales.toString(),
-      volume: agent.volume.toString(),
-      status: agent.status,
+  useEffect(() => {
+    void loadAgents()
+  }, [adminToken])
+
+  const filtered = useMemo(() => {
+    const result = agents.filter((agent) =>
+      `${agent.first_name} ${agent.last_name} ${agent.email ?? ""}`
+        .toLocaleLowerCase()
+        .includes(search.trim().toLocaleLowerCase()),
+    )
+    if (sortOrder === "Mayor venta") result.sort((a, b) => b.sales - a.sales)
+    if (sortOrder === "Menor venta") result.sort((a, b) => a.sales - b.sales)
+    if (sortOrder === "Mayor volumen") result.sort((a, b) => b.volume - a.volume)
+    return result
+  }, [agents, search, sortOrder])
+
+  const openEdit = (agent: DatabaseAgent) => {
+    setEditing(agent)
+    setViewing(null)
+    setForm({
+      firstName: agent.first_name,
+      lastName: agent.last_name,
+      phone: agent.phone ?? "",
+      email: agent.email ?? "",
+      password: "",
     })
-    setEditingAgent(agent)
+    setIsCreating(false)
+    setError("")
   }
 
-  const handleEdit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingAgent) return
-    const updated: Agent = {
-      ...editingAgent,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      zone: formData.zone,
-      sales: parseInt(formData.sales) || 0,
-      volume: parseFloat(formData.volume) || 0,
-      status: formData.status as Agent["status"],
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setIsSaving(true)
+    setError("")
+    try {
+      const result = await saveAdminRecord(
+        adminToken,
+        "agents",
+        editing?.id ?? null,
+        {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+          email: form.email,
+        },
+      )
+      const agentId = editing?.id ?? result?.id
+      if (!editing && agentId) {
+        setEditing({
+          id: agentId,
+          first_name: form.firstName,
+          last_name: form.lastName,
+          phone: form.phone || null,
+          email: form.email || null,
+          zone: "Sin zona asignada",
+          sales: 0,
+          volume: 0,
+        })
+        setIsCreating(false)
+      }
+      if (form.password && agentId) {
+        await saveAccount(adminToken, "agente", agentId, form.password)
+      }
+      setEditing(null)
+      setIsCreating(false)
+      setForm(emptyForm)
+      await loadAgents()
+    } catch (cause) {
+      await loadAgents()
+      setError(cause instanceof Error ? cause.message : "No se pudo guardar el asesor.")
+    } finally {
+      setIsSaving(false)
     }
-    setAgents(agents.map(a => a.id === updated.id ? updated : a))
-    setEditingAgent(null)
-    setFormData(initialForm)
-  }
-
-  let processedAgents = agents.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
-  
-  if (sortOrder === "Mayor venta") {
-    processedAgents.sort((a, b) => b.sales - a.sales)
-  } else if (sortOrder === "Menor venta") {
-    processedAgents.sort((a, b) => a.sales - b.sales)
-  } else if (sortOrder === "Mayor volumen") {
-    processedAgents.sort((a, b) => b.volume - a.volume)
   }
 
   return (
     <>
       <PageHeader
         eyebrow="Equipo comercial"
-        title="Agentes inmobiliarios"
-        description="Administra accesos, zonas asignadas y desempeño de cada asesor."
-        actions={
-          <Button icon="plus" onClick={() => { setFormData(initialForm); setIsCreating(true); }}>
-            Añadir agente
-          </Button>
-        }
+        title="Asesores inmobiliarios"
+        description="Datos de asesores y actividad calculada a partir de los inmuebles y contratos registrados."
+        actions={<Button icon="plus" onClick={() => { setForm(emptyForm); setEditing(null); setIsCreating(true); setError("") }}>Añadir asesor</Button>}
       />
-
+      {error && <p role="alert" className="mb-5 rounded-xl bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]">{error}</p>}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Icon
-            name="search"
-            size={18}
-            className="absolute left-4 top-3 text-[var(--muted)]"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar agente por nombre..."
-            className="pl-11"
-          />
+          <Icon name="search" size={18} className="absolute left-4 top-3 text-[var(--muted)]" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar asesor por nombre o correo" className="pl-11" />
         </div>
-        <select 
-          className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-        >
+        <select className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
           <option>Predeterminado</option>
           <option>Mayor venta</option>
           <option>Menor venta</option>
           <option>Mayor volumen</option>
         </select>
       </div>
-
-      <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-        {processedAgents.map((agent) => (
-          <Card key={agent.id} className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-soft)] font-display text-lg font-bold text-[var(--brand)]">
-                  {agent.name
-                    .split(" ")
-                    .map((word) => word[0])
-                    .slice(0, 2)
-                    .join("")}
-                </div>
-                <div>
-                  <h2 className="font-display text-lg font-bold">
-                    {agent.name}
-                  </h2>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    {agent.zone}
-                  </p>
+      {isLoading ? (
+        <p className="py-10 text-center text-sm text-[var(--muted)]">Cargando asesores de Inmobiliaria…</p>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+          {filtered.map((agent) => (
+            <Card key={agent.id} className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-soft)] font-display text-lg font-bold text-[var(--brand)]">
+                    {`${agent.first_name[0] ?? ""}${agent.last_name[0] ?? ""}`}
+                  </div>
+                  <div>
+                    <h2 className="font-display text-lg font-bold">{agent.first_name} {agent.last_name}</h2>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{agent.zone} · ID {agent.id}</p>
+                  </div>
                 </div>
               </div>
-              <StatusBadge status={agent.status} />
-            </div>
-            <div className="my-5 grid grid-cols-2 divide-x divide-[var(--border)] rounded-xl bg-[var(--surface-soft)] py-3 text-center">
-              <div>
-                <p className="font-display text-xl font-bold">{agent.sales}</p>
-                <p className="text-xs text-[var(--muted)]">Ventas</p>
+              <div className="my-5 grid grid-cols-2 divide-x divide-[var(--border)] rounded-xl bg-[var(--surface-soft)] py-3 text-center">
+                <div><p className="font-display text-xl font-bold">{agent.sales}</p><p className="text-xs text-[var(--muted)]">Contratos de venta</p></div>
+                <div><p className="font-display text-xl font-bold">{money(agent.volume)}</p><p className="text-xs text-[var(--muted)]">Volumen contratado</p></div>
               </div>
-              <div>
-                <p className="font-display text-xl font-bold">
-                  {money(agent.volume)}
-                </p>
-                <p className="text-xs text-[var(--muted)]">Volumen</p>
+              <div className="space-y-2 text-sm text-[var(--muted)]">
+                <p className="flex items-center gap-2"><Icon name="phone" size={15} />{agent.phone || "Sin teléfono"}</p>
+                <p className="flex items-center gap-2"><Icon name="user" size={15} />{agent.email || "Sin correo"}</p>
               </div>
-            </div>
-            <div className="space-y-2 text-sm text-[var(--muted)]">
-              <p className="flex items-center gap-2">
-                <Icon name="phone" size={15} />
-                {agent.phone}
-              </p>
-              <p className="flex items-center gap-2">
-                <Icon name="user" size={15} />
-                {agent.email}
-              </p>
-            </div>
-            <Button variant="secondary" className="mt-5 w-full" onClick={() => setViewingAgent(agent)}>
-              Ver rendimiento
-            </Button>
-          </Card>
-        ))}
-      </div>
-
-      {(isCreating || editingAgent) && (
-        <Modal title={isCreating ? "Añadir nuevo agente" : "Editar agente"} onClose={() => { setIsCreating(false); setEditingAgent(null); }}>
-          <form onSubmit={isCreating ? handleCreate : handleEdit} className="space-y-4">
-            <label className="block text-sm font-semibold text-[var(--text)]">
-              Nombre completo
-              <Input
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-                required
-                className="mt-2"
-                placeholder="Ej. Ana Torres"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-[var(--text)]">
-              Correo corporativo
-              <Input
-                value={formData.email}
-                onChange={e => setFormData({...formData, email: e.target.value})}
-                type="email"
-                required
-                className="mt-2"
-                placeholder="ana@huancayork.pe"
-              />
-            </label>
+              <div className="mt-5 flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => setViewing(agent)}>Ver rendimiento</Button>
+                <Button variant="ghost" onClick={() => openEdit(agent)}>Editar / acceso</Button>
+              </div>
+            </Card>
+          ))}
+          {!filtered.length && <p className="col-span-full py-8 text-center text-sm text-[var(--muted)]">No hay asesores que coincidan con la búsqueda.</p>}
+        </div>
+      )}
+      {(isCreating || editing) && (
+        <Modal title={isCreating ? "Añadir asesor" : "Editar asesor y acceso"} onClose={() => { if (!isSaving) { setIsCreating(false); setEditing(null) } }}>
+          <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-semibold text-[var(--text)]">
-                Teléfono
-                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required className="mt-2" />
-              </label>
-              <label className="block text-sm font-semibold text-[var(--text)]">
-                Zona
-                <Input value={formData.zone} onChange={e => setFormData({...formData, zone: e.target.value})} required className="mt-2" />
-              </label>
+              <label className="text-sm font-semibold">Nombres<Input required maxLength={20} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="mt-2" /></label>
+              <label className="text-sm font-semibold">Apellidos<Input required maxLength={20} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="mt-2" /></label>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <label className="block text-sm font-semibold text-[var(--text)]">
-                Ventas
-                <Input type="number" min="0" value={formData.sales} onChange={e => setFormData({...formData, sales: e.target.value})} required className="mt-2" />
-              </label>
-              <label className="block text-sm font-semibold text-[var(--text)]">
-                Volumen (S/)
-                <Input type="number" min="0" value={formData.volume} onChange={e => setFormData({...formData, volume: e.target.value})} required className="mt-2" />
-              </label>
-              <label className="block text-sm font-semibold text-[var(--text)]">
-                Estado
-                <select 
-                  className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5 text-sm text-[var(--text)]"
-                  value={formData.status}
-                  onChange={e => setFormData({...formData, status: e.target.value})}
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Vacaciones">Vacaciones</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => { setIsCreating(false); setEditingAgent(null); }}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">{isCreating ? "Guardar agente" : "Actualizar agente"}</Button>
-            </div>
+            <label className="block text-sm font-semibold">Correo<Input type="email" maxLength={40} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-2" /></label>
+            <label className="block text-sm font-semibold">Teléfono<Input maxLength={9} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-2" /></label>
+            <label className="block text-sm font-semibold">Contraseña de acceso (opcional)
+              <Input type="password" minLength={8} autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-2" placeholder="Mínimo 8 caracteres" />
+              <span className="mt-1 block text-xs font-normal text-[var(--muted)]">El asesor podrá acceder con su correo y el perfil Agente.</span>
+            </label>
+            <div className="flex justify-end gap-2"><Button type="button" variant="ghost" disabled={isSaving} onClick={() => { setIsCreating(false); setEditing(null) }}>Cancelar</Button><Button type="submit" disabled={isSaving}>{isSaving ? "Guardando…" : "Guardar en Inmobiliaria"}</Button></div>
           </form>
         </Modal>
       )}
-
-      {viewingAgent && (
-        <Modal title="Rendimiento del agente" onClose={() => setViewingAgent(null)}>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-3 items-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-soft)] font-display text-xl font-bold text-[var(--brand)]">
-                  {viewingAgent.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}
-                </div>
-                <div>
-                  <h3 className="font-display text-2xl font-bold">{viewingAgent.name}</h3>
-                  <p className="text-sm text-[var(--muted)]">{viewingAgent.zone}</p>
-                </div>
-              </div>
-              <StatusBadge status={viewingAgent.status} />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 rounded-xl bg-[var(--surface-soft)] p-5 text-center mt-2">
-              <div>
-                <p className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Total Ventas</p>
-                <p className="font-display text-4xl font-bold text-[var(--brand)]">{viewingAgent.sales}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[var(--muted)] uppercase tracking-wider mb-1">Volumen Generado</p>
-                <p className="font-display text-3xl font-bold text-[var(--text)] mt-1">{money(viewingAgent.volume)}</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border)] p-4 text-sm mt-2 flex flex-col gap-3">
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">ID de Agente:</span>
-                <span className="font-semibold">{viewingAgent.id}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Correo:</span>
-                <span className="font-semibold">{viewingAgent.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Teléfono:</span>
-                <span className="font-semibold">{viewingAgent.phone}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => openEdit(viewingAgent)}>Editar</Button>
-              <Button onClick={() => setViewingAgent(null)}>Cerrar</Button>
-            </div>
+      {viewing && (
+        <Modal title="Rendimiento del asesor" onClose={() => setViewing(null)}>
+          <h3 className="font-display text-xl font-bold">{viewing.first_name} {viewing.last_name}</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">{viewing.zone}</p>
+          <div className="mt-5 grid grid-cols-2 gap-4 rounded-xl bg-[var(--surface-soft)] p-5 text-center">
+            <div><p className="text-xs text-[var(--muted)]">Contratos de venta</p><p className="font-display text-3xl font-bold text-[var(--brand)]">{viewing.sales}</p></div>
+            <div><p className="text-xs text-[var(--muted)]">Volumen contratado</p><p className="font-display text-2xl font-bold text-[var(--brand)]">{money(viewing.volume)}</p></div>
           </div>
+          <p className="mt-4 text-xs text-[var(--muted)]">Cálculo basado en los contratos asociados a este asesor en la base de datos.</p>
         </Modal>
       )}
     </>

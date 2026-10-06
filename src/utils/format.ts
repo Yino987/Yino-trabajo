@@ -12,7 +12,7 @@ export function exportCsv(
   if (!rows.length) return
   const headers = Object.keys(rows[0])
   const escape = (value: string | number) =>
-    `"${String(value).replaceAll('"', '""')}"`
+    `"${String(value).replace(/"/g, '""')}"`
   const content = [
     headers.map(escape).join(","),
     ...rows.map((row) =>
