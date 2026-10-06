@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Huancayork · gestión inmobiliaria local
 
 Aplicación React/Vite con API local para MySQL. MySQL Workbench sirve para
@@ -74,3 +75,6 @@ ajustarse a ese esquema antes de usar el catálogo.
 contenga instrucciones como `TRUNCATE`, `DELETE` o inserciones de datos
 personales no debe ejecutarse como si fuera solo el esquema. Esta aplicación no
 ejecuta automáticamente archivos SQL.
+=======
+# Yino-trabajo
+>>>>>>> fbb2b61499d6da9b248232e8c6e2860c45a11240
